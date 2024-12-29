@@ -4,8 +4,8 @@
 
   const mapboxAccessToken =
     "pk.eyJ1IjoiY2FtZXJvbm1hdGhlcm5lIiwiYSI6ImNtNTl4bGU5NzRlMDgybG9veDVtc3lkd3oifQ.Y_p-yXHOlu_KLHI8r5AH6Q";
-  const google_key = "AIzaSyB9RznnpXAou3Aa0s4qUXxt7EVMd2lqftA";
 
+  const google_key = "AIzaSyB9RznnpXAou3Aa0s4qUXxt7EVMd2lqftA";
   let restaurants: any[] = [];
   let mapContainer: HTMLDivElement | null = null;
   let map: mapboxgl.Map;
@@ -34,13 +34,12 @@
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
-
           console.log("Latitude: " + latitude + ", Longitude: " + longitude);
 
           initializeMap(latitude, longitude);
 
-          await fetchRestaurants(latitude, longitude);
-          addRestaurantMarkers(restaurants);
+          console.log("grabbing restaurants");
+          restaurants = await getRestaurants(latitude, longitude);
         },
         (error) => {
           console.error("Geolocation error:", error);
@@ -53,33 +52,30 @@
     }
   });
 
-  const fetchRestaurants = async (latitude: number, longitude: number) => {
-    const radius = 25 * 1609.34; // 25 miles in meters
-    const type = "restaurant";
-    const googleKey = google_key;
+  const getRestaurants = async (latitude: number, longitude: number) => {
+    const url = `/api/restaurants?latitude=${latitude}&longitude=${longitude}`;
 
-    const res = await fetch(
-      `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${type}&key=${google_key}`
-    );
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Error: ${response.statusText}`);
+      }
 
-    const data = await res.json();
-
-    return data.results;
-  };
-
-  const addRestaurantMarkers = (restaurants: any[]) => {
-    restaurants.forEach((restaurant) => {
-      const { lat, lng } = restaurant.geometry.location;
-
-      new mapboxgl.Marker()
-        .setLngLat([lng, lat])
-        .setPopup(
-          new mapboxgl.Popup().setHTML(
-            `<h3>${restaurant.name}</h3><p>${restaurant.vicinity}</p>`
-          )
-        )
-        .addTo(map);
-    });
+      const data = await response.json();
+      return data.results.map((result: any) => ({
+        name: result.name,
+        vicinity: result.vicinity || "Address not available",
+        geometry: {
+          location: {
+            lat: result.geometry.location.lat,
+            lng: result.geometry.location.lng,
+          },
+        },
+      }));
+    } catch (error) {
+      console.error("Error fetching restaurants:", error);
+      return [];
+    }
   };
 
   const toggleSidebar = () => {
@@ -121,12 +117,11 @@
     </button>
     <div class="sidebar-content">
       <h2>Nearby Restaurants</h2>
-      {#each restaurants as restaurant}
-        <div class="restaurant-item">
-          <h3>{restaurant.name}</h3>
-          <p>{restaurant.vicinity}</p>
-        </div>
-      {/each}
+      <ul>
+        {#each restaurants as restaurant}
+          <li>{restaurant.text}</li>
+        {/each}
+      </ul>
     </div>
   </div>
 
