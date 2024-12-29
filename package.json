@@ -28,6 +28,8 @@
   "type": "module",
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",
+    "@turf/turf": "^7.2.0",
+    "axios": "^1.7.9",
     "leaflet": "^1.9.4",
     "mapbox-gl": "^3.9.1"
   }
